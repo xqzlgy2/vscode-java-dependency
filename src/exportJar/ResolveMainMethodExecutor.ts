@@ -51,6 +51,7 @@ export class ResolveMainMethodExecutor implements IExportJarStepExecutor {
         pickItems.push(noMainClassItem);
         const disposables: Disposable[] = [];
         let result: boolean = false;
+        stepMetadata.isPickedWorkspace = true;
         try {
             result = await new Promise<boolean>(async (resolve, reject) => {
                 const pickBox = createPickBox("Export Jar : Determine main class", "Select the main class",

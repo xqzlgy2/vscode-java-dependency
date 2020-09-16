@@ -7,7 +7,7 @@ import { Disposable, Extension, extensions, ProgressLocation, QuickInputButtons,
 import { ExportJarStep, IStepMetadata } from "../exportJarFileCommand";
 import { Jdtls } from "../java/jdtls";
 import { IExportJarStepExecutor } from "./IExportJarStepExecutor";
-import { createPickBox, IJarQuickPickItem } from "./utility";
+import { createPickBox, IJarQuickPickItem, saveDialog } from "./utility";
 
 export class GenerateJarExecutor implements IExportJarStepExecutor {
 
@@ -31,10 +31,13 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
                 token.onCancellationRequested(() => {
                     return reject();
                 });
-                const destPath = join(stepMetadata.workspaceUri.fsPath, basename(stepMetadata.workspaceUri.fsPath) + ".jar");
-                const exportResult = await Jdtls.exportJar(basename(stepMetadata.selectedMainMethod), stepMetadata.elements, destPath);
+                const outputUri: Uri = await saveDialog(stepMetadata.workspaceUri, "Generate");
+                if (outputUri === undefined) {
+                    return reject();
+                }
+                const exportResult = await Jdtls.exportJar(basename(stepMetadata.selectedMainMethod), stepMetadata.elements, outputUri.fsPath);
                 if (exportResult === true) {
-                    stepMetadata.outputPath = destPath;
+                    stepMetadata.outputPath = outputUri.fsPath;
                     return resolve(true);
                 } else {
                     return reject(new Error("Export jar failed."));
@@ -93,7 +96,8 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
         let result: boolean = false;
         try {
             result = await new Promise<boolean>(async (resolve, reject) => {
-                const pickBox = createPickBox("Export Jar : Determine elements", "Select the elements", dependencyItems, true, true);
+                const pickBox = createPickBox("Export Jar : Determine elements", "Select the elements", dependencyItems,
+                    stepMetadata.isPickedWorkspace, true);
                 pickBox.selectedItems = pickedDependencyItems;
                 disposables.push(
                     pickBox.onDidTriggerButton((item) => {

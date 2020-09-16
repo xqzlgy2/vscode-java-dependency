@@ -2,13 +2,13 @@
 // Licensed under the MIT license.
 
 import { EOL, platform } from "os";
-import { commands, Uri, window } from "vscode";
+import { commands, Task, tasks, Uri, window } from "vscode";
 import { sendOperationError } from "vscode-extension-telemetry-wrapper";
 import { buildWorkspace } from "./build";
-import { GenerateJarExecutor } from "./exportJarSteps/GenerateJarExecutor";
-import { IExportJarStepExecutor } from "./exportJarSteps/IExportJarStepExecutor";
-import { ResolveMainMethodExecutor } from "./exportJarSteps/ResolveMainMethodExecutor";
-import { ResolveWorkspaceExecutor } from "./exportJarSteps/ResolveWorkspaceExecutor";
+import { GenerateJarExecutor } from "./exportJar/GenerateJarExecutor";
+import { IExportJarStepExecutor } from "./exportJar/IExportJarStepExecutor";
+import { ResolveMainMethodExecutor } from "./exportJar/ResolveMainMethodExecutor";
+import { ResolveWorkspaceExecutor } from "./exportJar/ResolveWorkspaceExecutor";
 import { isStandardServerReady } from "./extension";
 import { INodeData } from "./java/nodeData";
 
@@ -44,6 +44,11 @@ export async function createJarFile(node?: INodeData) {
     return new Promise<string>(async (resolve, reject) => {
         if (await buildWorkspace() === false) {
             return reject();
+        }
+        const taskgets: Task[] = await tasks.fetchTasks();
+        for (const task of taskgets) {
+            console.log(task.name);
+            console.log(task.definition);
         }
         let step: ExportJarStep = ExportJarStep.ResolveWorkspace;
         const stepMetadata: IStepMetadata = {

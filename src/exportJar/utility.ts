@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-import { QuickInputButtons, QuickPick, QuickPickItem, window } from "vscode";
+import { OpenDialogOptions, QuickInputButtons, QuickPick, QuickPickItem, SaveDialogOptions, Uri, window, workspace } from "vscode";
 
 export interface IJarQuickPickItem extends QuickPickItem {
     uri?: string;
@@ -18,4 +18,15 @@ export function createPickBox(title: string, placeholder: string, items: IJarQui
     pickBox.ignoreFocusOut = true;
     pickBox.buttons = backBtnEnabled ? [(QuickInputButtons.Back)] : [];
     return pickBox;
+}
+
+export async function saveDialog(workSpaceUri: Uri, title: string): Promise<Uri> {
+    const options: SaveDialogOptions = {
+        saveLabel: title,
+        defaultUri: workSpaceUri,
+        filters: {
+            "Java Archive": ["jar"],
+        },
+    };
+    return Promise.resolve(await window.showSaveDialog(options));
 }
