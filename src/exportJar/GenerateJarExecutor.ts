@@ -3,7 +3,7 @@
 
 import { pathExists } from "fs-extra";
 import { basename, extname, join } from "path";
-import { Disposable, Extension, extensions, ProgressLocation, QuickInputButtons, Uri, window } from "vscode";
+import { Disposable, Extension, extensions, ProgressLocation, QuickInputButtons, Uri, window, workspace } from "vscode";
 import { ExportJarStep, IStepMetadata } from "../exportJarFileCommand";
 import { Jdtls } from "../java/jdtls";
 import { IExportJarStepExecutor } from "./IExportJarStepExecutor";
@@ -31,13 +31,19 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
                 token.onCancellationRequested(() => {
                     return reject();
                 });
-                const outputUri: Uri = await saveDialog(stepMetadata.workspaceUri, "Generate");
-                if (outputUri === undefined) {
-                    return reject();
+                let destPath: string = "";
+                if (workspace.getConfiguration("java.dependency.exportjar").get<boolean>("defaultTargetFolder")) {
+                    destPath = join(stepMetadata.workspaceUri.fsPath, basename(stepMetadata.workspaceUri.fsPath) + ".jar");
+                } else {
+                    const outputUri: Uri = await saveDialog(stepMetadata.workspaceUri, "Generate");
+                    if (outputUri === undefined) {
+                        return reject();
+                    }
+                    destPath = outputUri.fsPath;
                 }
-                const exportResult = await Jdtls.exportJar(basename(stepMetadata.selectedMainMethod), stepMetadata.elements, outputUri.fsPath);
+                const exportResult = await Jdtls.exportJar(basename(stepMetadata.selectedMainMethod), stepMetadata.elements, destPath);
                 if (exportResult === true) {
-                    stepMetadata.outputPath = outputUri.fsPath;
+                    stepMetadata.outputPath = destPath;
                     return resolve(true);
                 } else {
                     return reject(new Error("Export jar failed."));
@@ -153,7 +159,7 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
 
 }
 
-class ClasspathResult {
+export class ClasspathResult {
     public projectRoot: string;
     public classpaths: string[];
     public modulepaths: string[];

@@ -166,6 +166,11 @@
           ],
           "description": "%configuration.java.dependency.packagePresentation%",
           "default": "flat"
+        },
+        "java.dependency.exportjar.defaultTargetFolder": {
+          "type": "boolean",
+          "description": "Use workspace folder as the jar output default folder.",
+          "default": true
         }
       }
     },
@@ -350,19 +355,10 @@
     "taskDefinitions": [
       {
         "type": "exportjar",
-        "required": [
-          "name",
-          "includes",
-          "excludes"
-        ],
         "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name of export jar task."
-          },
-          "filesignore": {
+          "files": {
             "type": "array",
-            "description": "The array of export jar task."
+            "description": "The files of export jar task."
           },
           "manifest": {
             "type": "string",
