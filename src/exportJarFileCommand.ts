@@ -18,6 +18,7 @@ export interface IStepMetadata {
     isPickedWorkspace: boolean;
     projectList?: INodeData[];
     selectedMainMethod?: string;
+    manifest?: string;
     outputPath?: string;
     elements: string[];
 }
@@ -36,7 +37,7 @@ const stepMap: Map<ExportJarStep, IExportJarStepExecutor> = new Map<ExportJarSte
     [ExportJarStep.GenerateJar, new GenerateJarExecutor()],
 ]);
 
-export async function createJarFile(node?: INodeData) {
+export async function createJarFile(node?: INodeData, metadataInput?: IStepMetadata) {
     if (!isStandardServerReady() || isExportingJar) {
         return;
     }
@@ -45,17 +46,12 @@ export async function createJarFile(node?: INodeData) {
         if (await buildWorkspace() === false) {
             return reject();
         }
-        const taskgets: Task[] = await tasks.fetchTasks();
-        for (const task of taskgets) {
-            console.log(task.name);
-            console.log(task.definition);
-        }
         let step: ExportJarStep = ExportJarStep.ResolveWorkspace;
-        const stepMetadata: IStepMetadata = {
+        const stepMetadata: IStepMetadata = (metadataInput === undefined) ? {
             entry: node,
             isPickedWorkspace: false,
             elements: [],
-        };
+        } : metadataInput;
         while (step !== ExportJarStep.Finish) {
             try {
                 step = await stepMap.get(step).execute(stepMetadata);

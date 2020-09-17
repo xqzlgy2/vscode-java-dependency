@@ -14,7 +14,7 @@ export class ResolveMainMethodExecutor implements IExportJarStepExecutor {
     }
 
     public async execute(stepMetadata: IStepMetadata): Promise<ExportJarStep> {
-        if (await this.resolveMainMethod(stepMetadata)) {
+        if (stepMetadata.manifest !== undefined || await this.resolveMainMethod(stepMetadata)) {
             return ExportJarStep.GenerateJar;
         }
         return ExportJarStep.ResolveWorkspace;

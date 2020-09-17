@@ -12,10 +12,12 @@ import { createPickBox, IJarQuickPickItem } from "./utility";
 export class ResolveWorkspaceExecutor implements IExportJarStepExecutor {
 
     public async execute(stepMetadata: IStepMetadata): Promise<ExportJarStep> {
-        await this.resolveWorkspaceFolder(stepMetadata, stepMetadata.entry);
-        stepMetadata.projectList = await Jdtls.getProjects(stepMetadata.workspaceUri.toString());
-        if (stepMetadata.projectList === undefined) {
-            throw new Error("No project found. Please make sure your project folder is opened.");
+        if (stepMetadata.workspaceUri === undefined && stepMetadata.projectList === undefined) {
+            await this.resolveWorkspaceFolder(stepMetadata, stepMetadata.entry);
+            stepMetadata.projectList = await Jdtls.getProjects(stepMetadata.workspaceUri.toString());
+            if (stepMetadata.projectList === undefined) {
+                throw new Error("No project found. Please make sure your project folder is opened.");
+            }
         }
         return ExportJarStep.ResolveMainMethod;
     }

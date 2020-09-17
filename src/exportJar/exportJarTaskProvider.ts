@@ -2,9 +2,14 @@ import { extname } from "path";
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-import { CustomExecution, Event, EventEmitter, Extension, extensions,
+import {
+    CustomExecution, Event, EventEmitter, Extension, extensions,
     Pseudoterminal, Task, TaskDefinition, TaskProvider, TaskScope,
-    TerminalDimensions, Uri, workspace } from "vscode";
+    TerminalDimensions, Uri, workspace,
+} from "vscode";
+import { buildWorkspace } from "../build";
+import { createJarFile, ExportJarStep, IStepMetadata } from "../exportJarFileCommand";
+import { isStandardServerReady } from "../extension";
 import { Jdtls } from "../java/jdtls";
 import { INodeData } from "../java/nodeData";
 import { ClasspathResult } from "./GenerateJarExecutor";
@@ -20,7 +25,9 @@ export class ExportJarTaskProvider implements TaskProvider {
     }
 
     public resolveTask(task: Task): Task | undefined {
-        return undefined;
+        const definition: IExportJarTaskDefinition = <any>task.definition;
+        return this.getTask(definition.workspacePath, definition.workSpace, definition.elements,
+            definition.projectList, definition.manifest, definition);
     }
 
     private async getTasks(): Promise<Task[]> {
@@ -41,6 +48,8 @@ export class ExportJarTaskProvider implements TaskProvider {
             const projectList: INodeData[] = await Jdtls.getProjects(folderStr);
             const uriSet: Set<string> = new Set<string>();
             const outputList: string[] = [];
+            let runtime: boolean = false;
+            let test: boolean = false;
             for (const project of projectList) {
                 const classPaths: ClasspathResult = await extensionApi.getClasspaths(project.uri, { scope: "runtime" });
                 for (let classpath of classPaths.classpaths) {
@@ -53,6 +62,8 @@ export class ExportJarTaskProvider implements TaskProvider {
                             }
                             outputList.push(classpath);
                         }
+                    } else {
+                        runtime = true;
                     }
                 }
                 const testClassPaths: ClasspathResult = await extensionApi.getClasspaths(project.uri, { scope: "test" });
@@ -66,26 +77,55 @@ export class ExportJarTaskProvider implements TaskProvider {
                             }
                             outputList.push(classpath);
                         }
+                    } else {
+                        test = true;
                     }
                 }
             }
-            outputList.push("External Dependencies");
+            if (runtime) {
+                outputList.push("Runtime Dependencies");
+            }
+            if (test) {
+                outputList.push("Test Dependencies");
+            }
             const defaultDefinition: IExportJarTaskDefinition = {
                 type: ExportJarTaskProvider.exportJarType,
-                files: outputList,
+                elements: outputList,
+                workspacePath: folder.uri.fsPath,
             };
             this.tasks.push(new Task(defaultDefinition, folder, folder.name,
                 ExportJarTaskProvider.exportJarType, new CustomExecution(async (): Promise<Pseudoterminal> => {
-                    return new ExportJarTaskTerminal();
+                    return new ExportJarTaskTerminal(Uri.parse(folder.uri.toString()), outputList, projectList, undefined);
                 })));
         }
         return this.tasks;
     }
 
+    private getTask(workspacePath: string, workSpace: Uri, elements: string[], projectList: INodeData[],
+                    manifest: string, definition?: IExportJarTaskDefinition): Task {
+        if (definition === undefined) {
+            definition = {
+                type: ExportJarTaskProvider.exportJarType,
+                workspacePath,
+                workSpace,
+                elements,
+                projectList,
+                manifest,
+            };
+        }
+        return new Task(definition, TaskScope.Workspace, workspacePath,
+            ExportJarTaskProvider.exportJarType, new CustomExecution(async (): Promise<Pseudoterminal> => {
+                return new ExportJarTaskTerminal(workSpace, elements, projectList, manifest);
+            }));
+    }
+
 }
 
 interface IExportJarTaskDefinition extends TaskDefinition {
-    files?: string[];
+    workspacePath?: string;
+    workSpace?: Uri;
+    elements?: string[];
+    projectList?: INodeData[];
     manifest?: string;
 }
 
@@ -97,12 +137,31 @@ class ExportJarTaskTerminal implements Pseudoterminal {
     public onDidWrite: Event<string> = this.writeEmitter.event;
     public onDidClose?: Event<void> = this.closeEmitter.event;
 
-    public open(initialDimensions: TerminalDimensions | undefined): void {
+    private workSpace: Uri;
+    private elements: string[];
+    private projectList: INodeData[];
+    private manifest: string;
 
+    constructor(workSpace: Uri, elements: string[], projectList: INodeData[], manifest: string) {
+        this.workSpace = workSpace;
+        this.elements = elements;
+        this.projectList = projectList;
+        this.manifest = manifest;
+    }
+
+    public async open(initialDimensions: TerminalDimensions | undefined): Promise<void> {
+        const stepMetadata: IStepMetadata = {
+            entry: undefined,
+            isPickedWorkspace: true,
+            workspaceUri: this.workSpace,
+            elements: this.elements,
+            projectList: this.projectList,
+            manifest: this.manifest,
+        };
+        createJarFile(undefined);
     }
 
     public close(): void {
-
     }
 
 }

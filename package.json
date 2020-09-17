@@ -356,7 +356,11 @@
       {
         "type": "exportjar",
         "properties": {
-          "files": {
+          "workspacePath": {
+            "type": "string",
+            "description": "The workspace folder of export jar task."
+          },
+          "elements": {
             "type": "array",
             "description": "The files of export jar task."
           },
