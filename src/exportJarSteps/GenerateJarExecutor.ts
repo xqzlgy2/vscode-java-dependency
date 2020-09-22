@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-import { pathExists } from "fs-extra";
+import { pathExists, pathExistsSync } from "fs-extra";
 import * as _ from "lodash";
 import { basename, extname, join } from "path";
-import { Disposable, Extension, extensions, ProgressLocation, QuickInputButtons, QuickPickItem, Uri, window } from "vscode";
+import { Disposable, Extension, extensions, ProgressLocation, QuickInputButtons, QuickPickItem, Uri, window, workspace } from "vscode";
 import { ExportJarStep } from "../exportJarFileCommand";
 import { Jdtls } from "../java/jdtls";
 import { IExportJarStepExecutor } from "./IExportJarStepExecutor";
 import { IStepMetadata } from "./IStepMetadata";
-import { createPickBox } from "./utility";
+import { createPickBox, ErrorWithHandler, IMessageOption, saveDialog } from "./utility";
 
 export class GenerateJarExecutor implements IExportJarStepExecutor {
 
@@ -37,7 +37,24 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
                 token.onCancellationRequested(() => {
                     return reject();
                 });
-                const destPath = join(stepMetadata.workspaceUri.fsPath, basename(stepMetadata.workspaceUri.fsPath) + ".jar");
+                const setting: string = workspace.getConfiguration("java.dependency.exportjar").get<string>("defaultTargetFolder");
+                let destPath = "";
+                // tslint:disable-next-line: no-invalid-template-strings
+                if (setting === "${workspaceFolder}") {
+                    destPath = join(stepMetadata.workspaceUri.fsPath, basename(stepMetadata.workspaceUri.fsPath) + ".jar");
+                } else if (setting === "Browse...") {
+                    const outputUri: Uri = await saveDialog(stepMetadata.workspaceUri, "Generate");
+                    if (outputUri === undefined) {
+                        return reject();
+                    }
+                    destPath = outputUri.fsPath;
+                } else {
+                    const option: IMessageOption = {
+                        title: "Edit in settings.json",
+                        command: "workbench.action.openSettingsJson",
+                    };
+                    return reject(new ErrorWithHandler("Invalid target folder. Please check it in settings.json.", option));
+                }
                 const exportResult = await Jdtls.exportJar(basename(stepMetadata.selectedMainMethod), stepMetadata.elements, destPath);
                 if (exportResult === true) {
                     stepMetadata.outputPath = destPath;

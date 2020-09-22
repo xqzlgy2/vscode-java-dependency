@@ -1,15 +1,14 @@
+import { commands } from "vscode";
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-import { EOL, platform } from "os";
-import { commands, Uri, window } from "vscode";
-import { sendOperationError } from "vscode-extension-telemetry-wrapper";
 import { buildWorkspace } from "./build";
 import { GenerateJarExecutor } from "./exportJarSteps/GenerateJarExecutor";
 import { IExportJarStepExecutor } from "./exportJarSteps/IExportJarStepExecutor";
 import { IStepMetadata } from "./exportJarSteps/IStepMetadata";
 import { ResolveJavaProjectExecutor } from "./exportJarSteps/ResolveJavaProjectExecutor";
 import { ResolveMainMethodExecutor } from "./exportJarSteps/ResolveMainMethodExecutor";
+import { ErrorWithHandler, failMessage, successMessage } from "./exportJarSteps/utility";
 import { isStandardServerReady } from "./extension";
 import { INodeData } from "./java/nodeData";
 
@@ -20,28 +19,30 @@ export enum ExportJarStep {
     Finish = "FINISH",
 }
 
-let isExportingJar: boolean = false;
 const stepMap: Map<ExportJarStep, IExportJarStepExecutor> = new Map<ExportJarStep, IExportJarStepExecutor>([
     [ExportJarStep.ResolveJavaProject, new ResolveJavaProjectExecutor()],
     [ExportJarStep.ResolveMainMethod, new ResolveMainMethodExecutor()],
     [ExportJarStep.GenerateJar, new GenerateJarExecutor()],
 ]);
 
+let isExportingJar: boolean = false;
+
 export async function createJarFile(node?: INodeData) {
     if (!isStandardServerReady() || isExportingJar) {
         return;
     }
     isExportingJar = true;
+    let step: ExportJarStep = ExportJarStep.ResolveJavaProject;
+    let stepMetadata: IStepMetadata = {
+        entry: node,
+        elements: [],
+        steps: [],
+    };
     return new Promise<string>(async (resolve, reject) => {
         if (await buildWorkspace() === false) {
+            isExportingJar = false;
             return reject();
         }
-        let step: ExportJarStep = ExportJarStep.ResolveJavaProject;
-        let stepMetadata: IStepMetadata = {
-            entry: node,
-            elements: [],
-            steps: [],
-        };
         while (step !== ExportJarStep.Finish) {
             try {
                 const executor: IExportJarStepExecutor = stepMap.get(step);
@@ -57,7 +58,7 @@ export async function createJarFile(node?: INodeData) {
                     step = await executor.execute(stepMetadata);
                 }
             } catch (err) {
-                return err ? reject(`${err}`) : reject();
+                return reject(err);
             }
         }
         return resolve(stepMetadata.outputPath);
@@ -65,29 +66,11 @@ export async function createJarFile(node?: INodeData) {
         successMessage(message);
         isExportingJar = false;
     }, (err) => {
-        failMessage(err);
+        if (err instanceof ErrorWithHandler) {
+            failMessage(err.message, err.handler);
+        } else if (err) {
+            failMessage(`${err}`);
+        }
         isExportingJar = false;
     });
-}
-
-function failMessage(message: string) {
-    sendOperationError("", "Export Jar", new Error(message));
-    window.showErrorMessage(message, "Done");
-}
-
-function successMessage(outputFileName: string) {
-    let openInExplorer: string;
-    if (platform() === "win32") {
-        openInExplorer = "Reveal in File Explorer";
-    } else if (platform() === "darwin") {
-        openInExplorer = "Reveal in Finder";
-    } else {
-        openInExplorer = "Open Containing Folder";
-    }
-    window.showInformationMessage("Successfully exported jar to" + EOL + outputFileName,
-        openInExplorer, "Done").then((messageResult) => {
-            if (messageResult === openInExplorer) {
-                commands.executeCommand("revealFileInOS", Uri.file(outputFileName));
-            }
-        });
 }

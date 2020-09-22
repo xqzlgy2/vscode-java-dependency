@@ -171,6 +171,15 @@
           ],
           "description": "%configuration.java.dependency.packagePresentation%",
           "default": "flat"
+        },
+        "java.dependency.exportjar.defaultTargetFolder": {
+          "type": "string",
+          "enum": [
+            "${workspaceFolder}",
+            "Browse..."
+          ],
+          "description": "Specific the default output folder of export jar.",
+          "default": "${workspaceFolder}"
         }
       }
     },
@@ -247,9 +256,9 @@
       ],
       "explorer/context": [
         {
-            "command": "java.view.package.revealInProjectExplorer",
-            "when": "resourceExtname == .java && extensionActivated && java:serverMode == Standard",
-            "group": "java:project_10"
+          "command": "java.view.package.revealInProjectExplorer",
+          "when": "resourceExtname == .java && extensionActivated && java:serverMode == Standard",
+          "group": "java:project_10"
         }
       ],
       "view/title": [
@@ -381,7 +390,7 @@
     "@types/minimatch": "^3.0.3",
     "@types/mocha": "^5.2.7",
     "@types/node": "^8.10.62",
-    "@types/vscode": "1.44.0",
+    "@types/vscode": "1.49.0",
     "glob": "^7.1.6",
     "gulp": "^4.0.2",
     "gulp-copy": "^4.0.1",
