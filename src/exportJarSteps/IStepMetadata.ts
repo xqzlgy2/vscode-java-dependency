@@ -10,7 +10,8 @@ export interface IStepMetadata {
     workspaceUri?: Uri;
     projectList?: INodeData[];
     selectedMainMethod?: string;
-    outputPath?: string;
     elements: string[];
+    outputPath?: string;
+    manifestPath?: string;
     steps: ExportJarStep[];
 }

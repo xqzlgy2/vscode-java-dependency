@@ -81,10 +81,10 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
                 const pickItems: IJarQuickPickItem[] = [];
                 const uriSet: Set<string> = new Set<string>();
                 for (const rootNode of stepMetadata.projectList) {
-                    const classPaths: ClasspathResult = await extensionApi.getClasspaths(rootNode.uri, { scope: "runtime" });
+                    const classPaths: IClasspathResult = await extensionApi.getClasspaths(rootNode.uri, { scope: "runtime" });
                     pickItems.push(...await this.parseDependencyItems(classPaths.classpaths, uriSet, stepMetadata.workspaceUri.fsPath, true),
                         ...await this.parseDependencyItems(classPaths.modulepaths, uriSet, stepMetadata.workspaceUri.fsPath, true));
-                    const classPathsTest: ClasspathResult = await extensionApi.getClasspaths(rootNode.uri, { scope: "test" });
+                    const classPathsTest: IClasspathResult = await extensionApi.getClasspaths(rootNode.uri, { scope: "test" });
                     pickItems.push(...await this.parseDependencyItems(classPathsTest.classpaths, uriSet, stepMetadata.workspaceUri.fsPath, false),
                         ...await this.parseDependencyItems(classPathsTest.modulepaths, uriSet, stepMetadata.workspaceUri.fsPath, false));
                 }
@@ -173,10 +173,10 @@ export class GenerateJarExecutor implements IExportJarStepExecutor {
 
 }
 
-class ClasspathResult {
-    public projectRoot: string;
-    public classpaths: string[];
-    public modulepaths: string[];
+export interface IClasspathResult {
+    projectRoot: string;
+    classpaths: string[];
+    modulepaths: string[];
 }
 
 interface IJarQuickPickItem extends QuickPickItem {

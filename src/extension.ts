@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-import { commands, Event, Extension, ExtensionContext, extensions, Uri } from "vscode";
+import { commands, Disposable, Event, Extension, ExtensionContext, extensions, tasks, Uri } from "vscode";
 import { dispose as disposeTelemetryWrapper, initializeFromJsonFile, instrumentOperation, instrumentOperationAsVsCodeCommand } from "vscode-extension-telemetry-wrapper";
 import { Commands } from "./commands";
 import { Context } from "./constants";
@@ -9,9 +9,12 @@ import { contextManager } from "./contextManager";
 import { LibraryController } from "./controllers/libraryController";
 import { ProjectController } from "./controllers/projectController";
 import { init as initExpService } from "./ExperimentationService";
+import { ExportJarTaskProvider } from "./exportJarSteps/exportJarTaskProvider";
 import { Settings } from "./settings";
 import { syncHandler } from "./syncHandler";
 import { DependencyExplorer } from "./views/dependencyExplorer";
+
+let exportJarTaskProvider: Disposable | undefined;
 
 export async function activate(context: ExtensionContext): Promise<any> {
     await initializeFromJsonFile(context.asAbsolutePath("./package.json"), { firstParty: true });
@@ -61,6 +64,7 @@ async function activateExtension(_operationId: string, context: ExtensionContext
         context.subscriptions.push(new DependencyExplorer(context));
         context.subscriptions.push(contextManager);
         context.subscriptions.push(syncHandler);
+        exportJarTaskProvider = tasks.registerTaskProvider(ExportJarTaskProvider.exportJarType, new ExportJarTaskProvider());
         contextManager.setContextValue(Context.EXTENSION_ACTIVATED, true);
 
         initExpService(context);
@@ -69,6 +73,9 @@ async function activateExtension(_operationId: string, context: ExtensionContext
 
 // this method is called when your extension is deactivated
 export async function deactivate() {
+    if (exportJarTaskProvider) {
+        exportJarTaskProvider.dispose();
+    }
     await disposeTelemetryWrapper();
 }
 

@@ -376,6 +376,29 @@
         "contents": "You can create a new Java project by clicking the below button.\n[Create new Java project](command:java.project.create)",
         "when": "!java:projectManagerActivated || java:serverMode != Standard"
       }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "exportjar",
+        "properties": {
+          "workspacePath": {
+            "type": "string",
+            "description": "The workspace folder of export jar task."
+          },
+          "elements": {
+            "type": "array",
+            "description": "The files of export jar task. Will dismiss the select elements step."
+          },
+          "manifest": {
+            "type": "string",
+            "description": "The path of the manifest file in the target jar. Will dismiss the select main mathod step."
+          },
+          "targetpath": {
+            "type": "string",
+            "description": "The target path of the jar. Will override the setting in settings.json"
+          }
+        }
+      }
     ]
   },
   "scripts": {

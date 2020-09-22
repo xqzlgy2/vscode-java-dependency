@@ -27,17 +27,22 @@ const stepMap: Map<ExportJarStep, IExportJarStepExecutor> = new Map<ExportJarSte
 
 let isExportingJar: boolean = false;
 
-export async function createJarFile(node?: INodeData) {
+export async function createJarFileEntry(node: INodeData, target: string) {
+    const stepMetadata: IStepMetadata = {
+        entry: node,
+        elements: [],
+        steps: [],
+        outputPath: target,
+    };
+    createJarFile(stepMetadata);
+}
+
+export async function createJarFile(stepMetadata?: IStepMetadata) {
     if (!isStandardServerReady() || isExportingJar) {
         return;
     }
     isExportingJar = true;
     let step: ExportJarStep = ExportJarStep.ResolveJavaProject;
-    let stepMetadata: IStepMetadata = {
-        entry: node,
-        elements: [],
-        steps: [],
-    };
     return new Promise<string>(async (resolve, reject) => {
         if (await buildWorkspace() === false) {
             isExportingJar = false;
@@ -50,7 +55,7 @@ export async function createJarFile(node?: INodeData) {
                     // Unpredictable error, return to the initialization
                     step = ExportJarStep.ResolveJavaProject;
                     stepMetadata = {
-                        entry: node,
+                        entry: stepMetadata.entry,
                         elements: [],
                         steps: [],
                     };
